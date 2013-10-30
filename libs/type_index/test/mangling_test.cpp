@@ -33,7 +33,12 @@ template<class T> inline void is_mangling_equal()
     BOOST_CHECK_EQUAL(other, theirs);
 }
 
+template<class T> struct template_type {};
+template<template<class> class T> struct template_template_type {};
+
 BOOST_AUTO_TEST_CASE(mangling_emulation_correct)
 {
     is_mangling_equal<int>();
+    is_mangling_equal<template_type<int>>();
+    is_mangling_equal<template_template_type<template_type>>();
 }
