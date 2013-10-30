@@ -1,0 +1,112 @@
+Review manager notes for proposed Boost.TypeIndex:
+==================================================
+Niall Douglas s_sourceforge at nedprod dot com
+
+
+Docs notes
+-=-=-=-=-=
+
+1. Typo in http://apolukhin.github.io/type_index/index.html#boost_typeindex.motivation
+
+"only a few implementations of Standart Library currently provide std::type_index"
+                                      ^
+
+2. http://apolukhin.github.io/type_index/boost_typeindex/examples.html:
+
+What happens if a functionality needs RTTI but RTTI is off? Do we see an exception throw?
+
+
+3. http://apolukhin.github.io/type_index/boost_typeindex/compiler_support.html
+
+I assume you really mean that any of those compilers *after* the versions tested will work?
+The file template_index_impl.hpp clearly does not differentiate on compiler version.
+
+
+4. http://apolukhin.github.io/type_index/boost_typeindex/performance.html
+
+This section needs to be performance AND space. I'd also break up the one long paragraph into bullet points.
+I'd also like to know a lot more about binary size bloat with either RTTI on or off.
+
+
+5. http://apolukhin.github.io/type_index/boost_typeindex_header_reference.html
+
+I don't get the phrase:
+
+" Consider including `<boost/type_index/type_index_minimal.hpp>` if you need only a type_index type with
+and without RTTI."
+
+because <boost/type_index.hpp> does this:
+
+#include <boost/type_index/type_index_minimal.hpp>
+
+#include <boost/type_index/template_index_impl.hpp>
+
+
+which makes irrelevant your earlier sentence.
+
+
+6. http://apolukhin.github.io/type_index/boost/template_id_with_cvr.html
+
+Typo in
+
+"Does not strips const, volatile and & modifiers from T"
+               ^
+
+
+7. http://apolukhin.github.io/type_index/boost_typeindex/examples.html
+
+You need to explain what a short name looks like with RTTI off, because from inspecting the source
+code it is *very* different from a mangled name.
+
+
+
+
+
+Source code notes:
+-=-=-=-=-=-=-=-=-=
+
+1. This git repo needs a proper Boost2Git .gitattributes for correct EOL mapping, and all EOLs
+converted to match.
+
+
+2. Will a program compiled with TypeIndex which uses RTTI needing features refuse to link if RTTI is off?
+If not, can this be arranged?
+
+
+3. I'd really prefer if template_index_impl.hpp generates a compiler warning or error if the compiler
+is not detected. Otherwise the problem is silent.
+
+
+4. Watch your inlines: for example in template_index_impl.hpp:
+
+template <class T>
+
+template_index template_id() BOOST_NOEXCEPT
+{
+
+    return template_index::construct<T>();
+
+}
+
+
+This will produce duplicate symbol during link time if used with the same type in more than one compiland.
+Making it inline fixes the clash.
+
+
+5. There appears to be no check for BOOST_CURRENT_FUNCTION=="(unknown)" i.e. this compiler does not
+have a compile time method of fetching the current function signature.
+
+
+6. All of your supported compilers provide macros for giving the mangled symbol of the enclosing
+function. You could, therefore, extract from that the mangled type and feed that to the demangling
+runtime functions as if RTTI were turned on. BTW, on MSVCRT the magic demangle function has the
+following prototype:
+
+extern "C" char* __cdecl __unDName(char* buffer, const char* mangled, int buflen,
+                      void *(*memget)(size_t), void (*memfree)(void *),
+                      unsigned short int flags);
+
+Usage looks like:
+
+                i->demangled=__unDName(NULL, i->mangled, 0, malloc, free, 0);
+
